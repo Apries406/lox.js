@@ -1,49 +1,49 @@
 export enum TokenType {
 	// 单字符符号 tokens
-	LEFT_PAREN, // (
-	RIGHT_PAREN, // )
-	LEFT_BRACE, // {
-	RIGHT_BRACE, // }
-	COMMA, // ,
-	DOT, // .
-	MINUS, // -
-	PLUS, // +
-	SEMICOLON, // ;
-	SLASH, // /
-	STAR, // *
+	LEFT_PAREN = 'TOKEN:LEFT_BRACE', // (
+	RIGHT_PAREN = 'TOKEN:RIGHT_BRACE', // )
+	LEFT_BRACE = 'TOKEN:LEFT_PAREN', // {
+	RIGHT_BRACE = 'TOKEN:RIGHT_PAREN', // }
+	COMMA = 'TOKEN:COMMA', // ,
+	DOT = 'TOKEN:DOT', // .
+	MINUS = 'TOKEN:MINUS', // -
+	PLUS = 'TOKEN:PLUS', // +
+	SEMICOLON = 'TOKEN:SEMICOLON', // ;
+	SLASH = 'TOKEN:SLASH', // /
+	STAR = 'TOKEN:STAR', // *
 
 	// 单/多字符符号 tokens
-	BANG, // !
-	BANG_EQUAL, // !=
-	EQUAL, // =
-	EQUAL_EQUAL, // ==
-	GREATER, // >
-	GREATER_EQUAL, // >=
-	LESS, // <
-	LESS_EQUAL, // <=
+	BANG = 'TOKEN:BANG', // !
+	BANG_EQUAL = 'TOKEN:BANG_EQUAL', // !=
+	EQUAL = 'TOKEN:EQUAL', // =
+	EQUAL_EQUAL = 'TOKEN:EQUAL_EQUAL', // ==
+	GREATER = 'TOKEN:GREATER', // >
+	GREATER_EQUAL = 'TOKEN:GREATER_EQUAL', // >=
+	LESS = 'TOKEN:LESS', // <
+	LESS_EQUAL = 'TOKEN:LESS_EQUAL', // <=
 
 	// 字面量
-	IDENTIFIER, // 标识符 (变量名、函数名、类名）
-	STRING, // 字符串
-	NUMBER, // 双精度浮点数
+	IDENTIFIER = 'TOKEN:IDENTIFIER', // 标识符 (变量名、函数名、类名）
+	STRING = 'TOKEN:STRING', // 字符串
+	NUMBER = 'TOKEN:NUMBER', // 双精度浮点数
 
 	// Keywords,
-	AND,
-	CLASS,
-	ELSE,
-	FALSE,
-	FUN,
-	FOR,
-	IF,
-	LET, // 改造成 let 声明
-	NIL,
-	OR,
-	PRINT,
-	RETURN,
-	SUPER,
-	THIS,
-	TRUE,
-	WHILE,
+	AND = 'TOKEN:AND',
+	CLASS = 'TOKEN:CLASS',
+	ELSE = 'TOKEN:ELSE',
+	FALSE = 'TOKEN:FALSE',
+	FUN = 'TOKEN:FUN',
+	FOR = 'TOKEN:FOR',
+	IF = 'TOKEN:IF',
+	LET = 'TOKEN:LET', // 改造成 let 声明
+	NIL = 'TOKEN:NIL',
+	OR = 'TOKEN:OR',
+	PRINT = 'TOKEN:PRINT',
+	RETURN = 'TOKEN:RETURN',
+	SUPER = 'TOKEN:SUPER',
+	THIS = 'TOKEN:THIS',
+	TRUE = 'TOKEN:TRUE',
+	WHILE = 'TOKEN:WHILE',
 
-	EOF,
+	EOF = 'TOKEN:END_OF_FILE',
 }

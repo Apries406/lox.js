@@ -1,1 +1,12 @@
-let language = "lox";
+class Lang {
+  init() {
+    print "Hello, world!";
+  }
+  setLanguage(lang) {
+    print "Setting language to" + lang;
+  }
+}
+
+lang = Lang();
+lang.setLanguage("Lox");
+

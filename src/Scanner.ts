@@ -7,7 +7,7 @@ export class Scanner {
 	private readonly tokens: Array<Token> = [];
 	private start: number = 0;
 	private current: number = 0;
-	private line: number = 0;
+	private line: number = 1;
 
 	private charTokenMap = {
 		'(': TokenType.LEFT_PAREN,
@@ -88,10 +88,13 @@ export class Scanner {
 					break;
 				case '/':
 					if (this.match('/')) {
-						// 注释
+						// 单行注释
 						while (this.peek() !== '\n' && !this.isAtEnd()) {
 							this.advance();
 						}
+					} else if (this.match('*')) {
+						// 块注释
+						this.blockComment();
 					} else {
 						this.addToken(TokenType.SLASH);
 					}
@@ -149,6 +152,34 @@ export class Scanner {
 		this.tokens.push(new Token(type, text, literal, this.line));
 	}
 
+	blockComment() {
+		let commentDepth = 1; // 支持嵌套注释
+		while (commentDepth > 0) {
+			if (this.isAtEnd()) {
+				Lox.error(this.line, 'Unterminated block comment');
+				return;
+			}
+
+			if (this.peek() === '\n') {
+				this.line++;
+			}
+
+			if (this.peek() === '/' && this.peekNext() === '*') {
+				// 遇到嵌套的 /*
+				commentDepth++;
+				this.advance(); // 跳过 /
+				this.advance(); // 跳过 *
+			} else if (this.peek() === '*' && this.peekNext() === '/') {
+				// 遇到 */
+				commentDepth--;
+				this.advance(); // 跳过 *
+				this.advance(); // 跳过 /
+			} else {
+				this.advance();
+			}
+		}
+	}
+
 	string() {
 		while (this.peek() !== '"' && !this.isAtEnd()) {
 			if (this.peek() === '\n') this.line++;
@@ -181,12 +212,12 @@ export class Scanner {
 	}
 
 	identifier() {
-		while (this.isAlphaNumeric(this.peek())) this.advance;
+		while (this.isAlphaNumeric(this.peek())) this.advance();
 
 		const text = this.source.substring(this.start, this.current);
-		const type: TokenType = Scanner.keywords[text];
+		let type: TokenType = Scanner.keywords[text];
 
-		if (type === null) type == TokenType.IDENTIFIER;
+		if (type === undefined) type = TokenType.IDENTIFIER;
 
 		this.addToken(type);
 	}

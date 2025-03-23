@@ -2,6 +2,7 @@
 import * as fs from 'node:fs';
 import * as readline from 'node:readline';
 import { Scanner } from './Scanner';
+import chalk from 'chalk';
 
 export class Lox {
 	static hadError: boolean = false;
@@ -9,7 +10,7 @@ export class Lox {
 	static main() {
 		const args = process.argv.slice(2); // 真正的命令行参数是从第三个元素开始的。
 		if (args.length > 1) {
-			console.log('user: node lox.js [script]');
+			console.error(chalk.red('usage: node lox.js [script]'));
 			process.exit(1);
 		} else if (args.length === 1) {
 			const lox = new Lox();
@@ -23,7 +24,6 @@ export class Lox {
 	runFile(filePath: string) {
 		fs.readFile(filePath, 'utf8', (error, data) => {
 			if (error) {
-				console.log(`无法读取文件: ${error.message}`);
 				process.exit(-1);
 			}
 			this.run(data);
@@ -49,7 +49,6 @@ export class Lox {
 		});
 
 		rl.on('close', () => {
-			console.log('退出');
 			process.exit(0);
 		});
 	}
@@ -71,7 +70,9 @@ export class Lox {
 	}
 
 	static report(line: number, where: string, message: string) {
-		console.log(`[ line: ${line} Error ${where} : ${message} ]`);
+		console.error(
+			chalk.red(`[Error]: + line: ${line} Error ${where} : ${message} `)
+		);
 		Lox.hadError = true;
 	}
 }
