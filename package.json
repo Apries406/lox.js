@@ -1,0 +1,23 @@
+{
+	"name": "loxjs",
+	"version": "1.0.0",
+	"main": "src/Lox.ts",
+	"type": "module",
+	"bin": {
+		"loxc": "dist/Lox.js"
+	},
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "tsc && node dist/Lox.js",
+		"build": "tsc",
+		"cmd": "npm unlink -g loxjs && npm run build && npm link"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"dependencies": {
+		"@types/node": "^22.13.11",
+		"typescript": "^5.8.2"
+	}
+}
