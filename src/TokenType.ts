@@ -5,9 +5,11 @@ export enum TokenType {
 	LEFT_BRACE = 'TOKEN:LEFT_PAREN', // {
 	RIGHT_BRACE = 'TOKEN:RIGHT_PAREN', // }
 	COMMA = 'TOKEN:COMMA', // ,
+	COLON = 'TOKEN:COLON', // :
 	DOT = 'TOKEN:DOT', // .
 	MINUS = 'TOKEN:MINUS', // -
 	PLUS = 'TOKEN:PLUS', // +
+	QUESTION = 'TOKEN:QUESTION', // ?
 	SEMICOLON = 'TOKEN:SEMICOLON', // ;
 	SLASH = 'TOKEN:SLASH', // /
 	STAR = 'TOKEN:STAR', // *

@@ -4,11 +4,11 @@
 	"main": "src/Lox.ts",
 	"type": "module",
 	"bin": {
-		"loxc": "dist/Lox.cjs"
+		"loxc": "dist/src/Lox.cjs"
 	},
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"start": "rollup --c && node dist/Lox.cjs",
+		"start": "rollup --c && node dist/src/Lox.cjs",
 		"build": "rimraf dist && rollup -c",
 		"cmd": "npm unlink -g loxjs && npm run build && npm link"
 	},

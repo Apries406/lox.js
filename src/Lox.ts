@@ -3,9 +3,16 @@ import * as fs from 'node:fs';
 import * as readline from 'node:readline';
 import { Scanner } from './Scanner';
 import chalk from 'chalk';
-
+import { Token } from './Token';
+import { TokenType } from './TokenType';
+import { Parser } from './Parser';
+import { RuntimeError } from './RuntimeError';
+import { Interpreter } from './Interpreter';
 export class Lox {
 	static hadError: boolean = false;
+	static hadRuntimeError: boolean = false;
+
+	static readonly interpreter = new Interpreter();
 
 	static main() {
 		const args = process.argv.slice(2); // 真正的命令行参数是从第三个元素开始的。
@@ -57,16 +64,36 @@ export class Lox {
 		if (Lox.hadError) {
 			process.exit(65);
 		}
+
+		if (Lox.hadRuntimeError) {
+			process.exit(70);
+		}
+
 		const scanner = new Scanner(source);
 		const tokens = scanner.scanTokens();
+		const parser = new Parser(tokens);
+		const expression = parser.parse();
 
-		for (const token of tokens) {
-			console.log(token);
-		}
+		if (Lox.hadError) return;
+
+		Lox.interpreter.interpret(expression);
 	}
 
-	static error(line: number, message: string): void {
+	static error(line: number, message: string) {
 		Lox.report(line, '', message);
+	}
+
+	static runtimeError(error: RuntimeError) {
+		console.log(error.message + '\n[line:' + error.token.line + ']');
+		Lox.hadRuntimeError = true;
+	}
+
+	static parseError(token: Token, message: string): void {
+		if (token.type === TokenType.EOF) {
+			Lox.report(token.line, 'at end', message);
+		}
+
+		Lox.report(token.line, 'at' + token.lexeme + ' ', message);
 	}
 
 	static report(line: number, where: string, message: string) {

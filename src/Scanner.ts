@@ -15,10 +15,12 @@ export class Scanner {
 		'{': TokenType.LEFT_BRACE,
 		'}': TokenType.RIGHT_BRACE,
 		',': TokenType.COMMA,
+		':': TokenType.COLON,
 		'.': TokenType.DOT,
 		';': TokenType.SEMICOLON,
 		'-': TokenType.MINUS,
 		'+': TokenType.PLUS,
+		'?': TokenType.QUESTION,
 		'*': TokenType.STAR,
 	};
 
@@ -230,7 +232,7 @@ export class Scanner {
 		if (this.current + 1 >= this.source.length) {
 			return '\0';
 		}
-		return this, this.source.charAt(this.current + 1);
+		return this.source.charAt(this.current + 1);
 	}
 
 	isAlpha(c: string): boolean {
