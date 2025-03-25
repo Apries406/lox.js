@@ -1,3 +1,4 @@
+import { Environment } from './Environment';
 import {
 	Assign,
 	Binary,
@@ -37,6 +38,8 @@ import { TokenType } from './TokenType';
 export type Value = object | null | boolean | string | number;
 
 export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
+	private environment = new Environment();
+
 	interpret(statements: Array<Stmt>) {
 		try {
 			for (const statement of statements) {
@@ -48,7 +51,11 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 	}
 
 	visitAssignExpr(expr: Assign): Value {
-		throw new Error('Method not implemented.');
+		const value = this.evaluate(expr.value);
+
+		this.environment.assign(expr.name, value);
+
+		return value;
 	}
 
 	visitBinaryExpr(expr: Binary): Value {
@@ -168,7 +175,7 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 	}
 
 	visitVariableExpr(expr: Variable): Value {
-		throw new Error('Method not implemented.');
+		return this.environment.get(expr.name);
 	}
 
 	evaluate(expr: Expr): Value {
@@ -179,6 +186,18 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 		stmt.accept(this);
 	}
 
+	executeBlock(statements: Array<Stmt>, environment: Environment) {
+		const previous = this.environment;
+		try {
+			this.environment = environment;
+
+			for (const statement of statements) {
+				this.execute(statement);
+			}
+		} finally {
+			this.environment = previous;
+		}
+	}
 	isTruthy(val: Value): boolean {
 		// false 和 nil 为 false
 		if (val === null) return false;
@@ -261,13 +280,13 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 	}
 
 	visitBlockStmt(stmt: Block): void {
-		throw new Error('Method not implemented.');
+		this.executeBlock(stmt.statements, new Environment(this.environment));
 	}
 	visitClassStmt(stmt: Class): void {
 		throw new Error('Method not implemented.');
 	}
 	visitExpressionStmt(stmt: Expression): void {
-		throw new Error('Method not implemented.');
+		this.evaluate(stmt.expression);
 	}
 	visitFunctionStmt(stmt: Function): void {
 		throw new Error('Method not implemented.');
@@ -276,7 +295,12 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 		throw new Error('Method not implemented.');
 	}
 	visitLetStmt(stmt: Let): void {
-		throw new Error('Method not implemented.');
+		let value: Value = null;
+		if (stmt.initializer !== null) {
+			value = this.evaluate(stmt.initializer);
+		}
+
+		this.environment.define(stmt.name.lexeme, value);
 	}
 
 	visitPrintStmt(stmt: Print): void {

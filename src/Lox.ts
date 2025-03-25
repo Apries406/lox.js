@@ -8,6 +8,7 @@ import { TokenType } from './TokenType';
 import { Parser } from './Parser';
 import { RuntimeError } from './RuntimeError';
 import { Interpreter } from './Interpreter';
+import { Stmt } from './Stmt';
 export class Lox {
 	static hadError: boolean = false;
 	static hadRuntimeError: boolean = false;
@@ -49,7 +50,7 @@ export class Lox {
 			if (line === 'exit') {
 				rl.close();
 			} else {
-				this.run(line);
+				this.run(line, true);
 				Lox.hadError = false; // 避免发生错误后退出
 				rl.prompt();
 			}
@@ -60,7 +61,7 @@ export class Lox {
 		});
 	}
 
-	run(source: string) {
+	run(source: string, isREPL: boolean = false) {
 		if (Lox.hadError) {
 			process.exit(65);
 		}
@@ -76,7 +77,16 @@ export class Lox {
 
 		if (Lox.hadError) return;
 
-		Lox.interpreter.interpret(statements);
+		if (isREPL && statements.length === 1 && statements[0] instanceof Stmt) {
+			try {
+				const res = Lox.interpreter.execute(statements[0]);
+				console.log(res);
+			} catch (error) {
+				Lox.runtimeError(error);
+			}
+		} else {
+			Lox.interpreter.interpret(statements);
+		}
 	}
 
 	static error(line: number, message: string) {

@@ -1,4 +1,5 @@
 import {
+	Assign,
 	Binary,
 	Comma,
 	Conditional,
@@ -6,9 +7,10 @@ import {
 	Grouping,
 	Literal,
 	Unary,
+	Variable,
 } from './Expr';
 import { Lox } from './Lox';
-import { Expression, Print, Stmt } from './Stmt';
+import { Block, Expression, Let, Print, Stmt } from './Stmt';
 import { Token } from './Token';
 import { TokenType } from './TokenType';
 
@@ -23,19 +25,29 @@ export class Parser {
 	parse(): Array<Stmt> {
 		const statements: Array<Stmt> = [];
 		while (!this.isAtEnd()) {
-			statements.push(this.statements());
+			statements.push(this.declaration());
 		}
 
 		return statements;
 	}
+	private declaration(): Stmt {
+		try {
+			if (this.match([TokenType.LET])) return this.letDeclaration();
+
+			return this.statements();
+		} catch (error) {
+			this.synchronize();
+			return null as unknown as Stmt;
+		}
+	}
 
 	private expression(): Expr {
-		return this.comma();
+		return this.assignment();
 	}
 
 	private statements(): Stmt {
 		if (this.match([TokenType.PRINT])) return this.printStatement();
-
+		if (this.match([TokenType.LEFT_BRACE])) return new Block(this.block());
 		return this.expressionStatement();
 	}
 
@@ -45,10 +57,57 @@ export class Parser {
 		return new Print(value);
 	}
 
+	private letDeclaration(): Stmt {
+		const name: Token = this.consume(
+			TokenType.IDENTIFIER,
+			'Expect variable name.'
+		);
+
+		let initializer: Expr = null as unknown as Expr;
+		if (this.match([TokenType.EQUAL])) {
+			initializer = this.expression();
+		}
+
+		this.consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
+		return new Let(name, initializer);
+	}
+
 	private expressionStatement(): Stmt {
 		const value: Expr = this.expression();
 		this.consume(TokenType.SEMICOLON, "Expected ';' after expression.");
 		return new Expression(value);
+	}
+
+	private block(): Array<Stmt> {
+		const statements: Array<Stmt> = [];
+
+		while (!this.check(TokenType.RIGHT_BRACE) && !this.isAtEnd()) {
+			statements.push(this.declaration());
+		}
+
+		this.consume(TokenType.RIGHT_BRACE, "Expect '}' after block.");
+		return statements;
+	}
+
+	// expression -> assignment
+	// assignment -> IDENTIFIER "=" assignment | equality;
+	private assignment(): Expr {
+		const expr = this.equality();
+
+		if (this.match([TokenType.EQUAL])) {
+			const equals = this.previous();
+			const value = this.assignment();
+
+			if (expr instanceof Variable) {
+				const name = expr.name;
+
+				return new Assign(name, value);
+			}
+
+			this.error(equals, 'Invalid assignment target.');
+		}
+
+		return expr;
 	}
 
 	// comma -> conditional(",", conditional)*
@@ -195,6 +254,10 @@ export class Parser {
 
 		if (this.match([TokenType.NUMBER, TokenType.STRING])) {
 			return new Literal(this.previous().literal);
+		}
+
+		if (this.match([TokenType.IDENTIFIER])) {
+			return new Variable(this.previous());
 		}
 
 		if (this.match([TokenType.LEFT_PAREN])) {
