@@ -10,7 +10,7 @@ import {
 	Logical,
 	Super,
 	This,
-	Visitor,
+	Visitor as ExprVisitor,
 	Set,
 	Unary,
 	Variable,
@@ -18,16 +18,30 @@ import {
 } from './Expr';
 import { Lox } from './Lox';
 import { RuntimeError } from './RuntimeError';
+import {
+	Block,
+	Class,
+	Expression,
+	Function,
+	If,
+	Let,
+	Print,
+	Return,
+	Stmt,
+	Visitor as StmtVisitor,
+	While,
+} from './Stmt';
 import { Token } from './Token';
 import { TokenType } from './TokenType';
 
 export type Value = object | null | boolean | string | number;
 
-export class Interpreter implements Visitor<Value> {
-	interpret(expression: Expr) {
+export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
+	interpret(statements: Array<Stmt>) {
 		try {
-			const value = this.evaluate(expression);
-			console.log(value);
+			for (const statement of statements) {
+				this.execute(statement);
+			}
 		} catch (error) {
 			Lox.runtimeError(error);
 		}
@@ -72,11 +86,11 @@ export class Interpreter implements Visitor<Value> {
 				this.checkNumberOperands(expr.operator, left, right);
 				return Number(left) - Number(right);
 			case TokenType.PLUS:
-				if (left instanceof Number && right instanceof Number) {
+				if (typeof left === 'number' && typeof right === 'number') {
 					// 数字
 					return Number(left) + Number(right);
 				}
-				if (left instanceof String || right instanceof String) {
+				if (typeof left === 'string' || typeof right === 'string') {
 					return String(left) + String(right);
 				}
 				throw new RuntimeError(
@@ -119,6 +133,7 @@ export class Interpreter implements Visitor<Value> {
 
 	visitGroupingExpr(expr: Grouping): Value {
 		return this.evaluate(expr.expression);
+		throw new Error('Method not implemented.');
 	}
 
 	visitLiteralExpr(expr: Literal): Value {
@@ -157,7 +172,11 @@ export class Interpreter implements Visitor<Value> {
 	}
 
 	evaluate(expr: Expr): Value {
-		return expr.accept<Value>(this as unknown as Visitor<Value>);
+		return expr.accept<Value>(this as unknown as ExprVisitor<Value>);
+	}
+
+	execute(stmt: Stmt): void {
+		stmt.accept(this);
 	}
 
 	isTruthy(val: Value): boolean {
@@ -176,12 +195,12 @@ export class Interpreter implements Visitor<Value> {
 	}
 
 	checkNumberOperand(token: Token, operand: Value) {
-		if (operand instanceof Number) return;
+		if (typeof operand === 'number') return;
 		throw new RuntimeError(token, 'Operand must be a number.');
 	}
 
 	checkNumberOperands(token: Token, left: Value, right: Value) {
-		if (left instanceof Number && right instanceof Number) return;
+		if (typeof left === 'number' && typeof right === 'number') return;
 		throw new RuntimeError(token, 'operands must be numbers.');
 	}
 
@@ -239,5 +258,36 @@ export class Interpreter implements Visitor<Value> {
 		}
 
 		return sum;
+	}
+
+	visitBlockStmt(stmt: Block): void {
+		throw new Error('Method not implemented.');
+	}
+	visitClassStmt(stmt: Class): void {
+		throw new Error('Method not implemented.');
+	}
+	visitExpressionStmt(stmt: Expression): void {
+		throw new Error('Method not implemented.');
+	}
+	visitFunctionStmt(stmt: Function): void {
+		throw new Error('Method not implemented.');
+	}
+	visitIfStmt(stmt: If): void {
+		throw new Error('Method not implemented.');
+	}
+	visitLetStmt(stmt: Let): void {
+		throw new Error('Method not implemented.');
+	}
+
+	visitPrintStmt(stmt: Print): void {
+		const value = this.evaluate(stmt.expression);
+		console.log(value);
+	}
+
+	visitReturnStmt(stmt: Return): void {
+		throw new Error('Method not implemented.');
+	}
+	visitWhileStmt(stmt: While): void {
+		throw new Error('Method not implemented.');
 	}
 }

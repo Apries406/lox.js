@@ -83,7 +83,9 @@ function defineAst(
 	// Visitor 类型
 	writer.write(`export interface Visitor<T> {\n`);
 	for (const type of Object.keys(types)) {
-		writer.write(`${indent}visit${type}${name}(expr: ${type}): T; \n`);
+		writer.write(
+			`${indent}visit${type}${name}(${name.toLowerCase()}: ${type}): T; \n`
+		);
 	}
 	writer.write(`}\n`);
 

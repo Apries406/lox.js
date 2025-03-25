@@ -4,15 +4,15 @@ import { Expr, Variable } from "./Expr";
 import { Token } from "./Token";
 
 export interface Visitor<T> {
-  visitBlockStmt(expr: Block): T; 
-  visitClassStmt(expr: Class): T; 
-  visitExpressionStmt(expr: Expression): T; 
-  visitFunctionStmt(expr: Function): T; 
-  visitIfStmt(expr: If): T; 
-  visitLetStmt(expr: Let): T; 
-  visitPrintStmt(expr: Print): T; 
-  visitReturnStmt(expr: Return): T; 
-  visitWhileStmt(expr: While): T; 
+  visitBlockStmt(stmt: Block): T; 
+  visitClassStmt(stmt: Class): T; 
+  visitExpressionStmt(stmt: Expression): T; 
+  visitFunctionStmt(stmt: Function): T; 
+  visitIfStmt(stmt: If): T; 
+  visitLetStmt(stmt: Let): T; 
+  visitPrintStmt(stmt: Print): T; 
+  visitReturnStmt(stmt: Return): T; 
+  visitWhileStmt(stmt: While): T; 
 }
 export abstract class Stmt { 
   abstract accept<T>(visitor: Visitor<T>): T;

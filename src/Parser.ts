@@ -8,6 +8,7 @@ import {
 	Unary,
 } from './Expr';
 import { Lox } from './Lox';
+import { Expression, Print, Stmt } from './Stmt';
 import { Token } from './Token';
 import { TokenType } from './TokenType';
 
@@ -19,17 +20,35 @@ export class Parser {
 		this.tokens = tokens;
 	}
 
-	parse(): Expr {
-		try {
-			return this.expression();
-		} catch (error) {
-			return null as unknown as Expr;
+	parse(): Array<Stmt> {
+		const statements: Array<Stmt> = [];
+		while (!this.isAtEnd()) {
+			statements.push(this.statements());
 		}
+
+		return statements;
 	}
 
 	private expression(): Expr {
-		console.log('expression');
 		return this.comma();
+	}
+
+	private statements(): Stmt {
+		if (this.match([TokenType.PRINT])) return this.printStatement();
+
+		return this.expressionStatement();
+	}
+
+	private printStatement(): Stmt {
+		const value: Expr = this.expression();
+		this.consume(TokenType.SEMICOLON, "Expect ';' after value.");
+		return new Print(value);
+	}
+
+	private expressionStatement(): Stmt {
+		const value: Expr = this.expression();
+		this.consume(TokenType.SEMICOLON, "Expected ';' after expression.");
+		return new Expression(value);
 	}
 
 	// comma -> conditional(",", conditional)*
@@ -79,11 +98,9 @@ export class Parser {
 
 	// equality -> comparison(("!=" | "==")comparison)*
 	private equality(): Expr {
-		console.log('equality');
-
 		let expr: Expr = this.comparison();
 
-		while (this.match([TokenType.BANG_EQUAL, TokenType.EQUAL])) {
+		while (this.match([TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL])) {
 			if (expr === null) {
 				this.reportBinaryOperatorError(this.previous().type); // 有两个，不确定
 				this.comparison(); // 解析并丢弃右操作数
@@ -91,7 +108,6 @@ export class Parser {
 				const operator = this.previous();
 				const right = this.comparison();
 				expr = new Binary(expr, operator, right);
-				console.log(expr);
 			}
 		}
 
@@ -100,8 +116,6 @@ export class Parser {
 
 	// comparison -> term((">" | ">=" | "<"| "<=")term)*
 	private comparison(): Expr {
-		console.log('comparison');
-
 		let expr: Expr = this.term();
 
 		while (
@@ -127,8 +141,6 @@ export class Parser {
 
 	// term -> factor(("-" | "+")factor)*
 	private term(): Expr {
-		console.log('term');
-
 		let expr = this.factor();
 
 		while (this.match([TokenType.MINUS, TokenType.PLUS])) {
@@ -147,8 +159,6 @@ export class Parser {
 
 	// factor => unary(("/" | "*")unary)*
 	private factor(): Expr {
-		console.log('factor');
-
 		let expr = this.unary();
 
 		while (this.match([TokenType.SLASH, TokenType.STAR])) {
@@ -167,8 +177,6 @@ export class Parser {
 
 	// unary -> ("!" | "-")unary | primary
 	private unary(): Expr {
-		console.log('unary');
-
 		if (this.match([TokenType.BANG, TokenType.MINUS])) {
 			const operator = this.previous();
 			const right = this.unary();
@@ -181,8 +189,6 @@ export class Parser {
 
 	// primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expr ")";
 	private primary(): Expr {
-		console.log('primary');
-
 		if (this.match([TokenType.FALSE])) return new Literal(false);
 		if (this.match([TokenType.TRUE])) return new Literal(true);
 		if (this.match[TokenType.NIL]) return new Literal(null);
