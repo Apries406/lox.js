@@ -72,12 +72,18 @@ export class Lox {
 
 		const scanner = new Scanner(source);
 		const tokens = scanner.scanTokens();
+		console.log('Lox tokens: ', tokens);
 		const parser = new Parser(tokens);
 		const statements = parser.parse();
+		console.log('Lox statements: ', statements);
 
 		if (Lox.hadError) return;
 
-		if (isREPL && statements.length === 1 && statements[0] instanceof Stmt) {
+		if (
+			isREPL &&
+			statements.length === 1 &&
+			statements[0] instanceof Stmt.Stmt
+		) {
 			try {
 				const res = Lox.interpreter.execute(statements[0]);
 				console.log(res);
@@ -94,6 +100,7 @@ export class Lox {
 	}
 
 	static runtimeError(error: RuntimeError) {
+		console.log('Lox runtimeError error:', error);
 		console.log(error.message + '\n[line:' + error.token.line + ']');
 		Lox.hadRuntimeError = true;
 	}
