@@ -26,6 +26,8 @@ export class Scanner {
 
 	static keywords = {
 		and: TokenType.AND,
+		break: TokenType.BREAK,
+		continue: TokenType.CONTINUE,
 		class: TokenType.CLASS,
 		else: TokenType.ELSE,
 		false: TokenType.FALSE,

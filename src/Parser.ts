@@ -6,17 +6,29 @@ import {
 	Expr,
 	Grouping,
 	Literal,
+	Logical,
 	Unary,
 	Variable,
 } from './Expr';
 import { Lox } from './Lox';
-import { Block, Expression, Let, Print, Stmt } from './Stmt';
+import {
+	Block,
+	Break,
+	Continue,
+	Expression,
+	If,
+	Let,
+	Print,
+	Stmt,
+	While,
+} from './Stmt';
 import { Token } from './Token';
 import { TokenType } from './TokenType';
 
 export class Parser {
 	private readonly tokens: Token[];
 	private current: number = 0;
+	private inLoop = false;
 
 	constructor(tokens: Token[]) {
 		this.tokens = tokens;
@@ -32,6 +44,8 @@ export class Parser {
 	}
 	private declaration(): Stmt {
 		try {
+			if (this.match([TokenType.CONTINUE])) return this.continueStatement();
+			if (this.match([TokenType.BREAK])) return this.breakStatement();
 			if (this.match([TokenType.LET])) return this.letDeclaration();
 
 			return this.statements();
@@ -42,19 +56,105 @@ export class Parser {
 	}
 
 	private expression(): Expr {
-		return this.assignment();
+		return this.comma();
 	}
 
 	private statements(): Stmt {
+		if (this.match([TokenType.FOR])) return this.forStatement();
+		if (this.match([TokenType.IF])) return this.IfStatement();
 		if (this.match([TokenType.PRINT])) return this.printStatement();
+		if (this.match([TokenType.WHILE])) return this.whileStatement();
 		if (this.match([TokenType.LEFT_BRACE])) return new Block(this.block());
 		return this.expressionStatement();
+	}
+
+	private forStatement() {
+		this.inLoop = true;
+		try {
+			this.consume(TokenType.LEFT_PAREN, "Expected '(' after 'for'");
+
+			const initializer = this.match([TokenType.SEMICOLON])
+				? null
+				: this.match([TokenType.LET])
+				? this.letDeclaration()
+				: this.expressionStatement();
+
+			let condition = this.check(TokenType.SEMICOLON)
+				? null
+				: this.expression();
+
+			this.consume(TokenType.SEMICOLON, "Expect ';' after loop condition");
+
+			const increment = this.check(TokenType.RIGHT_PAREN)
+				? null
+				: this.expression();
+
+			this.consume(TokenType.RIGHT_PAREN, "Expect ')' after for clauses");
+
+			let body = increment
+				? new Block([this.statements(), new Expression(increment)])
+				: this.statements();
+
+			if (!condition) condition = new Literal(true);
+			body = new While(condition, body);
+
+			if (initializer) body = new Block([initializer, body]);
+
+			return body;
+		} finally {
+			this.inLoop = false;
+		}
+	}
+
+	private IfStatement(): Stmt {
+		this.consume(TokenType.LEFT_PAREN, "Expect '(' after 'if'. ");
+		const condition: Expr = this.expression();
+		this.consume(TokenType.RIGHT_PAREN, "Expected ')'");
+
+		const thenBranch: Stmt = this.statements();
+		const elseBranch: Stmt | null = this.match([TokenType.ELSE])
+			? this.statements()
+			: null;
+
+		return new If(condition, thenBranch, elseBranch as Stmt);
 	}
 
 	private printStatement(): Stmt {
 		const value: Expr = this.expression();
 		this.consume(TokenType.SEMICOLON, "Expect ';' after value.");
 		return new Print(value);
+	}
+
+	private whileStatement(): Stmt {
+		this.inLoop = true;
+		try {
+			this.consume(TokenType.LEFT_PAREN, "Expect '(' after 'while'.");
+			const condition: Expr = this.expression();
+			this.consume(TokenType.RIGHT_PAREN, "Expect ')' after condition.");
+			const body = this.statements();
+			return new While(condition, body);
+		} finally {
+			this.inLoop = false;
+		}
+	}
+
+	private continueStatement(): Stmt {
+		const keyword = this.previous();
+		this.consume(TokenType.SEMICOLON, "Expect ';' after 'continue'.");
+		if (!this.inLoop) {
+			this.error(keyword, "Can't use 'continue' outsize of a loop.");
+		}
+		return new Continue(keyword);
+	}
+
+	private breakStatement(): Stmt {
+		const keyword = this.previous();
+		this.consume(TokenType.SEMICOLON, "Expect ';' after 'break'.");
+		if (!this.inLoop) {
+			this.error(keyword, "Can't use 'break' outsize of a loop.");
+		}
+
+		return new Break(keyword);
 	}
 
 	private letDeclaration(): Stmt {
@@ -92,8 +192,7 @@ export class Parser {
 	// expression -> assignment
 	// assignment -> IDENTIFIER "=" assignment | equality;
 	private assignment(): Expr {
-		const expr = this.equality();
-
+		const expr = this.conditional();
 		if (this.match([TokenType.EQUAL])) {
 			const equals = this.previous();
 			const value = this.assignment();
@@ -110,17 +209,38 @@ export class Parser {
 		return expr;
 	}
 
+	private or(): Expr {
+		let expr = this.and();
+		while (this.match([TokenType.OR])) {
+			const operator = this.previous();
+			const right = this.and();
+			expr = new Logical(expr, operator, right);
+		}
+		return expr;
+	}
+
+	private and(): Expr {
+		let expr = this.equality();
+		while (this.match([TokenType.AND])) {
+			const operator = this.previous();
+			const right = this.equality();
+			expr = new Logical(expr, operator, right);
+		}
+
+		return expr;
+	}
+
 	// comma -> conditional(",", conditional)*
 	private comma(): Expr {
-		let expr = this.conditional();
+		let expr = this.assignment();
 
 		while (this.match([TokenType.COMMA])) {
 			if (expr === null) {
 				this.reportBinaryOperatorError(TokenType.COMMA);
-				this.conditional(); // 解析并丢弃右操作数
+				this.assignment(); // 解析并丢弃右操作数
 			} else {
 				const operator = this.previous();
-				const right = this.conditional();
+				const right = this.assignment();
 				expr = new Comma(expr, operator, right);
 			}
 		}
@@ -130,7 +250,7 @@ export class Parser {
 
 	// conditional -> equality ("?" expression ":" conditional)?
 	private conditional(): Expr {
-		let expr = this.equality();
+		let expr = this.or();
 
 		if (this.match([TokenType.QUESTION])) {
 			if (expr === null) {
@@ -230,7 +350,6 @@ export class Parser {
 				expr = new Binary(expr, operator, right);
 			}
 		}
-
 		return expr;
 	}
 
@@ -249,16 +368,16 @@ export class Parser {
 	// primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expr ")";
 	private primary(): Expr {
 		if (this.match([TokenType.FALSE])) return new Literal(false);
+
 		if (this.match([TokenType.TRUE])) return new Literal(true);
-		if (this.match[TokenType.NIL]) return new Literal(null);
 
-		if (this.match([TokenType.NUMBER, TokenType.STRING])) {
+		if (this.match([TokenType.NIL])) return new Literal(null);
+
+		if (this.match([TokenType.NUMBER, TokenType.STRING]))
 			return new Literal(this.previous().literal);
-		}
 
-		if (this.match([TokenType.IDENTIFIER])) {
+		if (this.match([TokenType.IDENTIFIER]))
 			return new Variable(this.previous());
-		}
 
 		if (this.match([TokenType.LEFT_PAREN])) {
 			const expr = this.expression();

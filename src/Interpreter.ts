@@ -1,3 +1,4 @@
+import { error } from 'console';
 import { Environment } from './Environment';
 import {
 	Assign,
@@ -18,10 +19,12 @@ import {
 	Expr,
 } from './Expr';
 import { Lox } from './Lox';
-import { RuntimeError } from './RuntimeError';
+import { BreakError, ContinueError, RuntimeError } from './RuntimeError';
 import {
 	Block,
+	Break,
 	Class,
+	Continue,
 	Expression,
 	Function,
 	If,
@@ -140,7 +143,6 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 
 	visitGroupingExpr(expr: Grouping): Value {
 		return this.evaluate(expr.expression);
-		throw new Error('Method not implemented.');
 	}
 
 	visitLiteralExpr(expr: Literal): Value {
@@ -148,8 +150,17 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 	}
 
 	visitLogicalExpr(expr: Logical): Value {
-		throw new Error('Method not implemented.');
+		const left = this.evaluate(expr.left);
+
+		if (expr.operator.type === TokenType.OR) {
+			if (this.isTruthy(left)) return left; // 逻辑短路， or情况，且左边为 true，则断在左边
+		} else {
+			if (!this.isTruthy(left)) return left; // and 情况，左边是 false，则断在左边
+		}
+
+		return this.evaluate(expr.right);
 	}
+
 	visitSetExpr(expr: Set): Value {
 		throw new Error('Method not implemented.');
 	}
@@ -201,7 +212,7 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 	isTruthy(val: Value): boolean {
 		// false 和 nil 为 false
 		if (val === null) return false;
-		if (val instanceof Boolean) return !!val as boolean;
+		if (typeof val === 'boolean') return Boolean(val);
 
 		return true;
 	}
@@ -291,9 +302,15 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 	visitFunctionStmt(stmt: Function): void {
 		throw new Error('Method not implemented.');
 	}
+
 	visitIfStmt(stmt: If): void {
-		throw new Error('Method not implemented.');
+		if (this.isTruthy(this.evaluate(stmt.condition))) {
+			this.execute(stmt.thenBranch);
+		} else if (stmt.elseBranch !== null) {
+			this.execute(stmt.elseBranch);
+		}
 	}
+
 	visitLetStmt(stmt: Let): void {
 		let value: Value = null;
 		if (stmt.initializer !== null) {
@@ -311,7 +328,27 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 	visitReturnStmt(stmt: Return): void {
 		throw new Error('Method not implemented.');
 	}
+
 	visitWhileStmt(stmt: While): void {
-		throw new Error('Method not implemented.');
+		while (this.isTruthy(this.evaluate(stmt.condition))) {
+			try {
+				this.execute(stmt.body);
+			} catch (error) {
+				if (error instanceof BreakError) {
+					return;
+				}
+
+				if (error instanceof ContinueError) {
+					continue;
+				}
+			}
+		}
+	}
+
+	visitBreakStmt(stmt: Break): void {
+		throw new BreakError(stmt.keyword);
+	}
+	visitContinueStmt(stmt: Continue): void {
+		throw new ContinueError(stmt.keyword);
 	}
 }

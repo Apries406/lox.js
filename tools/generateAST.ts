@@ -47,6 +47,8 @@ defineAst(
 	'Stmt',
 	{
 		Block: 'Array<Stmt> statements--块级语句 {}',
+		Break: 'Token keyword--break语句 Control Flow ',
+		Continue: 'Token keyword--continue语句 Control Flow ',
 		Class: 'Token name, Variable superclass, Array<Function> methods--类语句',
 		Expression: 'Expr expression--表达式语句',
 		Function: 'Token name, Array<Token> params, Array<Stmt> body--Function语句',

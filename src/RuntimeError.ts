@@ -8,3 +8,17 @@ export class RuntimeError extends Error {
 		this.token = token;
 	}
 }
+
+export class BreakError extends Error {
+	constructor(public token: Token) {
+		super('Break');
+		this.name = 'BreakError';
+	}
+}
+
+export class ContinueError extends Error {
+	constructor(public token: Token) {
+		super('Continue');
+		this.name = 'ContinueError';
+	}
+}

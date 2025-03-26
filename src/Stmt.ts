@@ -5,6 +5,8 @@ import { Token } from "./Token";
 
 export interface Visitor<T> {
   visitBlockStmt(stmt: Block): T; 
+  visitBreakStmt(stmt: Break): T; 
+  visitContinueStmt(stmt: Continue): T; 
   visitClassStmt(stmt: Class): T; 
   visitExpressionStmt(stmt: Expression): T; 
   visitFunctionStmt(stmt: Function): T; 
@@ -29,6 +31,34 @@ export class Block extends Stmt {
 
   accept<T>(visitor: Visitor<T>): T {
     return visitor.visitBlockStmt(this)
+  }
+}
+
+// break语句 Control Flow 
+export class Break extends Stmt { 
+  keyword: Token
+
+  constructor(keyword: Token) {
+    super()
+    this.keyword = keyword
+  }
+
+  accept<T>(visitor: Visitor<T>): T {
+    return visitor.visitBreakStmt(this)
+  }
+}
+
+// continue语句 Control Flow 
+export class Continue extends Stmt { 
+  keyword: Token
+
+  constructor(keyword: Token) {
+    super()
+    this.keyword = keyword
+  }
+
+  accept<T>(visitor: Visitor<T>): T {
+    return visitor.visitContinueStmt(this)
   }
 }
 

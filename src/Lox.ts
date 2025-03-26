@@ -103,12 +103,12 @@ export class Lox {
 			Lox.report(token.line, 'at end', message);
 		}
 
-		Lox.report(token.line, 'at' + token.lexeme + ' ', message);
+		Lox.report(token.line, 'at ' + token.lexeme + ' ', message);
 	}
 
 	static report(line: number, where: string, message: string) {
 		console.error(
-			chalk.red(`[Error]: + line: ${line} Error ${where} : ${message} `)
+			chalk.red(`[Error]:  line: ${line} Error ${where} : ${message} `)
 		);
 		Lox.hadError = true;
 	}
