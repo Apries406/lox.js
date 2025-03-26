@@ -1,5 +1,2 @@
-fun sayHi(first, last) {
-  print "Hello" + first + " " + last + "!";
-}
-
-sayHi("John", "Doe");
+let a = 1 > 2 ? 1 : 2;
+print a;

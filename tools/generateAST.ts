@@ -17,6 +17,8 @@ defineAst(
 	'Expr',
 	{
 		Assign: 'Token name, Expr value--赋值表达式 Statement and State',
+		AnonymousFunction:
+			'Array<Token> params, Array<Stmt.Stmt> body --匿名函数 Statement and State ',
 		Binary:
 			'Expr left, Token operator, Expr right--二元表达式 Representing Code',
 		Call: 'Expr callee, Token paren, Array<Expr> args--调用表达式 Functions',
@@ -35,7 +37,7 @@ defineAst(
 		Unary: 'Token operator, Expr right--一元表达式 Representing Code',
 		Variable: 'Token name--变量表达式',
 	},
-	['import { Token } from "./Token";']
+	['import { Stmt } from "./Stmt";', 'import { Token } from "./Token";']
 );
 
 /**
@@ -49,19 +51,17 @@ defineAst(
 		Block: 'Array<Stmt> statements--块级语句 {}',
 		Break: 'Token keyword--break语句 Control Flow ',
 		Continue: 'Token keyword--continue语句 Control Flow ',
-		Class: 'Token name, Variable superclass, Array<Function> methods--类语句',
-		Expression: 'Expr expression--表达式语句',
+		Class:
+			'Token name, Expr.Variable superclass, Array<Function> methods--类语句',
+		Expression: 'Expr.Expr expression--表达式语句',
 		Function: 'Token name, Array<Token> params, Array<Stmt> body--Function语句',
-		If: 'Expr condition, Stmt thenBranch, Stmt elseBranch--Control Flow - if...else',
-		Let: 'Token name, Expr initializer--变量声明',
-		Print: 'Expr expression--Print语句',
-		Return: 'Token keyword, Expr value--返回语句',
-		While: 'Expr condition, Stmt body--Control Flow - while',
+		If: 'Expr.Expr condition, Stmt thenBranch, Stmt elseBranch--Control Flow - if...else',
+		Let: 'Token name, Expr.Expr initializer--变量声明',
+		Print: 'Expr.Expr expression--Print语句',
+		Return: 'Token keyword, Expr.Expr value--返回语句',
+		While: 'Expr.Expr condition, Stmt body--Control Flow - while',
 	},
-	[
-		'import { Expr, Variable } from "./Expr";',
-		'import { Token } from "./Token";',
-	]
+	['import { Expr } from "./Expr";', 'import { Token } from "./Token";']
 );
 
 function defineAst(
@@ -86,16 +86,18 @@ function defineAst(
 	writer.write(`export interface Visitor<T> {\n`);
 	for (const type of Object.keys(types)) {
 		writer.write(
-			`${indent}visit${type}${name}(${name.toLowerCase()}: ${type}): T; \n`
+			`${indent}visit${type}${name}(${name.toLowerCase()}: ${name}.${type}): T; \n`
 		);
 	}
 	writer.write(`}\n`);
 
 	// baseClass generator
+	writer.write(`export namespace ${name}{\n`);
+	writer.write(`${indent}export abstract class ${name} { \n`);
 
-	writer.write(`export abstract class ${name} { \n`);
-
-	writer.write(`${indent}abstract accept<T>(visitor: Visitor<T>): T;\n`);
+	writer.write(
+		`${indent}${indent}abstract accept<T>(visitor: Visitor<T>): T;\n`
+	);
 	writer.write(`}\n\n`);
 
 	// extends class generator
@@ -105,6 +107,7 @@ function defineAst(
 		writer.write('\n');
 	});
 
+	writer.write('}');
 	writer.end();
 }
 
@@ -126,24 +129,26 @@ function defineType(
 
 	// 私有变量
 	fieldList.map(([type, name]) => {
-		writer.write(`${indent}${name}: ${type}\n`);
+		writer.write(`${indent}${indent}${name}: ${type}\n`);
 	});
 
 	writer.write('\n');
 	// 构造函数
-	writer.write(`${indent}constructor(${result}) {\n`);
-	writer.write(`${indent}${indent}super()\n`);
+	writer.write(`${indent}${indent}constructor(${result}) {\n`);
+	writer.write(`${indent}${indent}${indent}${indent}super()\n`);
 	fieldList.forEach(([_type, name]) => {
-		writer.write(`${indent}${indent}this.${name} = ${name}\n`);
+		writer.write(
+			`${indent}${indent}${indent}${indent}this.${name} = ${name}\n`
+		);
 	});
 
-	writer.write(`${indent}}\n\n`);
+	writer.write(`${indent}${indent}}\n\n`);
 
-	writer.write(`${indent}accept<T>(visitor: Visitor<T>): T {\n`);
+	writer.write(`${indent}${indent}accept<T>(visitor: Visitor<T>): T {\n`);
 	writer.write(
-		`${indent}${indent}return visitor.visit${typeName}${parentName}(this)\n`
+		`${indent}${indent}${indent}${indent}return visitor.visit${typeName}${parentName}(this)\n`
 	);
-	writer.write(`${indent}}\n`);
+	writer.write(`${indent}${indent}}\n`);
 
 	writer.write('}\n');
 }

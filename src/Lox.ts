@@ -72,10 +72,8 @@ export class Lox {
 
 		const scanner = new Scanner(source);
 		const tokens = scanner.scanTokens();
-		console.log('Lox tokens: ', tokens);
 		const parser = new Parser(tokens);
 		const statements = parser.parse();
-		console.log('Lox statements: ', statements);
 
 		if (Lox.hadError) return;
 

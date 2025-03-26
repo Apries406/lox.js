@@ -1,30 +1,14 @@
 import { error } from 'console';
 import { Environment } from './Environment';
-import {
-	Assign,
-	Binary,
-	Call,
-	Comma,
-	Conditional,
-	Get,
-	Grouping,
-	Literal,
-	Logical,
-	Super,
-	This,
-	Visitor as ExprVisitor,
-	Set,
-	Unary,
-	Variable,
-	Expr,
-} from './Expr';
+import { Visitor as ExprVisitor, Expr } from './Expr';
 import { Lox } from './Lox';
 import { BreakError, ContinueError, RuntimeError } from './RuntimeError';
 import { Stmt, Visitor as StmtVisitor } from './Stmt';
 import { Token } from './Token';
 import { TokenType } from './TokenType';
-import { LoxCallable } from './LoxCallable';
+import { LoxBaseCallable, LoxCallable } from './LoxCallable';
 import { ClockFunction, LoxFunction } from './LoxFunction';
+import { ReturnException } from './ReturnException';
 
 export type Value = object | null | boolean | string | number;
 
@@ -32,7 +16,19 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 	globals: Environment = new Environment();
 	private environment = this.globals;
 
-	constructor() {}
+	constructor() {
+		this.globals.define('clock', {
+			arity(): number {
+				return 0;
+			},
+			call(interpreter: Interpreter, args: Array<Value>): Value {
+				return new Date().getTime() / 1000;
+			},
+			toString(): string {
+				return '<native fn>';
+			},
+		} as LoxCallable);
+	}
 
 	interpret(statements: Array<Stmt.Stmt>) {
 		try {
@@ -44,7 +40,7 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 		}
 	}
 
-	visitAssignExpr(expr: Assign): Value {
+	visitAssignExpr(expr: Expr.Assign): Value {
 		const value = this.evaluate(expr.value);
 
 		this.environment.assign(expr.name, value);
@@ -52,7 +48,7 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 		return value;
 	}
 
-	visitBinaryExpr(expr: Binary): Value {
+	visitBinaryExpr(expr: Expr.Binary): Value {
 		const left = this.evaluate(expr.left);
 		const right = this.evaluate(expr.right);
 
@@ -119,8 +115,7 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 		// Unreachable
 		return null;
 	}
-	visitCallExpr(expr: Call): Value {
-		console.log('触发visitCallExpr', expr);
+	visitCallExpr(expr: Expr.Call): Value {
 		const callee = this.evaluate(expr.callee);
 		const argumentArray: Array<Value> = [];
 
@@ -128,10 +123,10 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 			argumentArray.push(this.evaluate(arg));
 		}
 
-		if (!(callee instanceof LoxCallable)) {
+		if (!(callee instanceof LoxBaseCallable)) {
 			throw new RuntimeError(expr.paren, 'Can only call functions and classes');
 		}
-		const func: LoxCallable = callee as LoxCallable;
+		const func: LoxBaseCallable = callee as LoxBaseCallable;
 
 		if (argumentArray.length !== func.arity()) {
 			throw new RuntimeError(
@@ -143,29 +138,33 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 		return func.call(this, argumentArray);
 	}
 
-	visitCommaExpr(expr: Comma): Value {
+	visitCommaExpr(expr: Expr.Comma): Value {
 		console.log('触发visitCommaExpr');
 		throw new Error('Method not implemented.');
 	}
-	visitConditionalExpr(expr: Conditional): Value {
-		console.log('触发visitConditionalExpr');
-		throw new Error('Method not implemented.');
+	visitConditionalExpr(expr: Expr.Conditional): Value {
+		const condition = this.evaluate(expr.condition);
+		if (this.isTruthy(condition)) {
+			return this.evaluate(expr.thenBranch);
+		}
+
+		return this.evaluate(expr.elseBranch);
 	}
-	visitGetExpr(expr: Get): Value {
+	visitGetExpr(expr: Expr.Get): Value {
 		console.log('触发visitGetExpr');
 
 		throw new Error('Method not implemented.');
 	}
 
-	visitGroupingExpr(expr: Grouping): Value {
+	visitGroupingExpr(expr: Expr.Grouping): Value {
 		return this.evaluate(expr.expression);
 	}
 
-	visitLiteralExpr(expr: Literal): Value {
+	visitLiteralExpr(expr: Expr.Literal): Value {
 		return expr.value;
 	}
 
-	visitLogicalExpr(expr: Logical): Value {
+	visitLogicalExpr(expr: Expr.Logical): Value {
 		const left = this.evaluate(expr.left);
 
 		if (expr.operator.type === TokenType.OR) {
@@ -177,23 +176,23 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 		return this.evaluate(expr.right);
 	}
 
-	visitSetExpr(expr: Set): Value {
+	visitSetExpr(expr: Expr.Set): Value {
 		console.log('触发visitSetExpr');
 
 		throw new Error('Method not implemented.');
 	}
-	visitSuperExpr(expr: Super): Value {
+	visitSuperExpr(expr: Expr.Super): Value {
 		console.log('触发visitSetExpr');
 
 		throw new Error('Method not implemented.');
 	}
-	visitThisExpr(expr: This): Value {
+	visitThisExpr(expr: Expr.This): Value {
 		console.log('触发visitSetExpr');
 
 		throw new Error('Method not implemented.');
 	}
 
-	visitUnaryExpr(expr: Unary): Value {
+	visitUnaryExpr(expr: Expr.Unary): Value {
 		const right = this.evaluate(expr.right);
 
 		switch (expr.operator.type) {
@@ -207,11 +206,24 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 		return null;
 	}
 
-	visitVariableExpr(expr: Variable): Value {
+	visitVariableExpr(expr: Expr.Variable): Value {
 		return this.environment.get(expr.name);
 	}
 
-	evaluate(expr: Expr): Value {
+	visitAnonymousFunctionExpr(expr: Expr.AnonymousFunction): Value {
+		const anonymousFunc = new LoxFunction(
+			new Stmt.Function(
+				new Token(TokenType.IDENTIFIER, '', null, -1),
+				expr.params,
+				expr.body
+			),
+			this.environment
+		);
+
+		return anonymousFunc;
+	}
+
+	evaluate(expr: Expr.Expr): Value {
 		return expr.accept<Value>(this as unknown as ExprVisitor<Value>);
 	}
 
@@ -316,8 +328,6 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 		this.executeBlock(stmt.statements, new Environment(this.environment));
 	}
 	visitClassStmt(stmt: Stmt.Class): void {
-		console.log('触发visitClassStmt');
-
 		throw new Error('Method not implemented.');
 	}
 	visitExpressionStmt(stmt: Stmt.Expression): void {
@@ -325,11 +335,8 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 	}
 
 	visitFunctionStmt(stmt: Stmt.Function): void {
-		console.log('visitFunctionStmt');
-		const func: LoxFunction = new LoxFunction(stmt);
-		console.log('new func');
+		const func: LoxFunction = new LoxFunction(stmt, this.environment);
 		this.environment.define(stmt.name.lexeme, func);
-		console.log('define func');
 	}
 
 	visitIfStmt(stmt: Stmt.If): void {
@@ -355,9 +362,8 @@ export class Interpreter implements ExprVisitor<Value>, StmtVisitor<void> {
 	}
 
 	visitReturnStmt(stmt: Stmt.Return): void {
-		console.log('触发visitReturnStmt');
-
-		throw new Error('Method not implemented.');
+		const value = stmt.value ? this.evaluate(stmt.value!) : null;
+		throw new ReturnException(value);
 	}
 
 	visitWhileStmt(stmt: Stmt.While): void {
